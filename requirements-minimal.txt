@@ -1,0 +1,24 @@
+# SmartiAI Minimal Windows build
+requests>=2.31
+urllib3>=2.2
+certifi>=2024.8.30
+httpx>=0.27
+aiohttp>=3.9
+jsonschema>=4.23
+truststore>=0.10.4,<1
+cryptography>=43,<47
+openai>=1.40
+PyQt6>=6.11,<6.12
+PyAutoGUI>=0.9.54
+uiautomation>=2.0.20
+pyperclip>=1.8
+send2trash>=1.8
+keyboard>=0.13.5
+Markdown>=3.6
+keyring>=25.0
+beautifulsoup4>=4.12
+python-docx>=1.1
+PyPDF2>=3.0
+Pillow>=10.0
+windows-toasts>=1.3.1
+pywin32>=306; platform_system == "Windows"
