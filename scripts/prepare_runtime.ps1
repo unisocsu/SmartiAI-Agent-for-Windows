@@ -5,7 +5,8 @@ param(
     [string]$CacheDir,
     [string]$RequirementsPath,
     [switch]$Force,
-    [switch]$SkipRequirements
+    [switch]$SkipRequirements,
+    [switch]$SkipNode
 )
 
 $ErrorActionPreference = "Stop"
@@ -250,13 +251,13 @@ New-Item -ItemType Directory -Force -Path $RuntimeDir | Out-Null
 New-Item -ItemType Directory -Force -Path $CacheDir | Out-Null
 
 Prepare-PythonRuntime -Config $config
-Prepare-NodeRuntime -Config $config
+if (-not $SkipNode) { Prepare-NodeRuntime -Config $config }
 
 $manifest = [ordered]@{
     createdAt = (Get-Date).ToUniversalTime().ToString("o")
     pythonVersion = Get-ConfigValue $config.python "version"
-    nodeVersion = Get-ConfigValue $config.node "version"
-    layout = "runtime/python + runtime/node"
+    nodeVersion = if ($SkipNode) { "" } else { Get-ConfigValue $config.node "version" }
+    layout = if ($SkipNode) { "runtime/python" } else { "runtime/python + runtime/node" }
     notes = "Python and Node are private to Smarti packaged builds. Dynamic MCP downloads use the user npm cache; Skills may install Python/uv packages through this runtime."
 }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $RuntimeDir "runtime_manifest.json") -Encoding UTF8
