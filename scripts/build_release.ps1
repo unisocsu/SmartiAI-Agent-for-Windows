@@ -33,6 +33,7 @@ $WorkRoot = Resolve-DefaultWorkRoot
 $WorkRoot = [System.IO.Path]::GetFullPath($WorkRoot)
 $BuildDir = Join-Path $WorkRoot "build"
 $DistRoot = Join-Path $WorkRoot "dist"
+$DistName = if ($Minimal) { "SmartiAI-Minimal" } else { "SmartiAI" }
 $DistDir = Join-Path $DistRoot $DistName
 $ReleaseDir = Join-Path $RepoRoot "release"
 $BuildVenv = Join-Path $WorkRoot ".venv-build"
@@ -42,7 +43,6 @@ $PyInstallerWorkDir = Join-Path $WorkRoot "pyinstaller-work"
 $InstallerRelativePathBudget = 190
 $RequirementsFile = if ($Minimal) { "requirements-minimal.txt" } else { "requirements.txt" }
 $SpecFile = if ($Minimal) { "packaging\\smarti-minimal.spec" } else { "packaging\\smarti.spec" }
-$DistName = if ($Minimal) { "SmartiAI-Minimal" } else { "SmartiAI" }
 $AppExeName = if ($Minimal) { "SmartiAI-Minimal.exe" } else { "SmartiAI.exe" }
 
 function Get-SafeVersion {
