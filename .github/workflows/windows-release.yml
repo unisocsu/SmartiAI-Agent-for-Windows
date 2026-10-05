@@ -7,6 +7,11 @@ on:
         description: Release version, for example 1.0.0
         required: false
         default: ""
+      minimal:
+        description: Build the reduced-size Minimal package
+        required: false
+        default: false
+        type: boolean
   push:
     tags:
       - "v*"
@@ -39,10 +44,15 @@ jobs:
               $version = "${{ github.sha }}"
             }
           }
-          .\scripts\build_release.ps1 -Version $version
+          $minimal = "${{ github.event.inputs.minimal }}"
+          if ($minimal -eq "true") {
+            .\scripts\build_release.ps1 -Version $version -Minimal -Clean -SkipInstaller
+          } else {
+            .\scripts\build_release.ps1 -Version $version
+          }
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: SmartiAI-Windows
+          name: SmartiAI-Windows-${{ github.event.inputs.minimal || 'false' }}
           path: release/*
