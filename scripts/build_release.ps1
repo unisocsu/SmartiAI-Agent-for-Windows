@@ -298,7 +298,7 @@ $VenvPython = Join-Path $BuildVenv "Scripts\python.exe"
 Invoke-Checked -FilePath $VenvPython -Arguments @("-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel")
 Invoke-Checked -FilePath $VenvPython -Arguments @("-m", "pip", "install", "-r", (Join-Path $RepoRoot $RequirementsFile), "-r", (Join-Path $RepoRoot "requirements-build.txt"))
 Invoke-Checked -FilePath $VenvPython -Arguments @("-m", "pip", "check")
-Invoke-Checked -FilePath $VenvPython -Arguments @("-c", "import pymupdf, fitz; print('PyMuPDF visual-QA dependency:', pymupdf.__version__)")
+if (-not $Minimal) { Invoke-Checked -FilePath $VenvPython -Arguments @("-c", "import pymupdf, fitz; print('PyMuPDF visual-QA dependency:', pymupdf.__version__)") }
 
 if (-not $SkipRuntime) {
     $prepareArgs = @(
@@ -323,13 +323,13 @@ try {
         "--noconfirm",
         "--workpath", $PyInstallerWorkDir,
         "--distpath", $DistRoot,
-        (Join-Path $RepoRoot "packaging\smarti.spec")
+        (Join-Path $RepoRoot $SpecFile)
     )
 } finally {
     Pop-Location
 }
 
-if (-not (Test-Path (Join-Path $DistDir $AppExeName)) {
+if (-not (Test-Path (Join-Path $DistDir $AppExeName))) {
     throw "PyInstaller output is missing SmartiAI.exe in $DistDir"
 }
 
@@ -353,25 +353,26 @@ $manifest = [ordered]@{
     version = $ReleaseVersion
     builtAt = (Get-Date).ToUniversalTime().ToString("o")
     gitCommit = "$gitCommit".Trim()
-    appExe = "SmartiAI.exe"
+    appExe = $AppExeName
     runtime = "runtime"
     pythonExe = "runtime\python\python.exe"
-    nodeExe = "runtime\node\node.exe"
-    npxExe = "runtime\node\npx.cmd"
+    nodeExe = if ($Minimal) { "" } else { "runtime\node\node.exe" }
+    npxExe = if ($Minimal) { "" } else { "runtime\node\npx.cmd" }
 }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $DistDir "release_manifest.json") -Encoding UTF8
 
 Assert-ReleaseLayout -Root $DistDir -RequiredRelativePaths @(
-    "SmartiAI.exe",
+    $AppExeName,
     "_internal\assets\smarti.ico",
     "LICENSE",
     "README.md",
     "release_manifest.json",
     "runtime\runtime_manifest.json",
-    "runtime\python\python.exe",
-    "runtime\node\node.exe",
-    "runtime\node\npx.cmd"
+    "runtime\python\python.exe"
 )
+if (-not $Minimal) {
+    Assert-ReleaseLayout -Root $DistDir -RequiredRelativePaths @("runtime\node\node.exe", "runtime\node\npx.cmd")
+}
 Assert-InstallerPathBudget -Root $DistDir -MaxRelativeLength $InstallerRelativePathBudget
 
 $zipName = if ($Minimal) { "SmartiAI-Agent-for-Windows-$ReleaseVersion-minimal-win-x64-portable.zip" } else { "SmartiAI-Agent-for-Windows-$ReleaseVersion-win-x64-portable.zip" }
