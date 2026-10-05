@@ -43,6 +43,7 @@ $InstallerRelativePathBudget = 190
 $RequirementsFile = if ($Minimal) { "requirements-minimal.txt" } else { "requirements.txt" }
 $SpecFile = if ($Minimal) { "packaging\\smarti-minimal.spec" } else { "packaging\\smarti.spec" }
 $DistName = if ($Minimal) { "SmartiAI-Minimal" } else { "SmartiAI" }
+$AppExeName = if ($Minimal) { "SmartiAI-Minimal.exe" } else { "SmartiAI.exe" }
 
 function Get-SafeVersion {
     param([string]$Raw)
@@ -328,7 +329,7 @@ try {
     Pop-Location
 }
 
-if (-not (Test-Path (Join-Path $DistDir (if ($Minimal) { "SmartiAI-Minimal.exe" } else { "SmartiAI.exe" }))) {
+if (-not (Test-Path (Join-Path $DistDir $AppExeName)) {
     throw "PyInstaller output is missing SmartiAI.exe in $DistDir"
 }
 
