@@ -4,7 +4,8 @@ param(
     [switch]$Clean,
     [switch]$SkipRuntime,
     [switch]$SkipInstaller,
-    [switch]$ForceRuntime
+    [switch]$ForceRuntime,
+    [switch]$Minimal
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,13 +33,16 @@ $WorkRoot = Resolve-DefaultWorkRoot
 $WorkRoot = [System.IO.Path]::GetFullPath($WorkRoot)
 $BuildDir = Join-Path $WorkRoot "build"
 $DistRoot = Join-Path $WorkRoot "dist"
-$DistDir = Join-Path $DistRoot "SmartiAI"
+$DistDir = Join-Path $DistRoot $DistName
 $ReleaseDir = Join-Path $RepoRoot "release"
 $BuildVenv = Join-Path $WorkRoot ".venv-build"
 $RuntimeDir = Join-Path $BuildDir "runtime"
 $DownloadCacheDir = Join-Path $WorkRoot ".download-cache"
 $PyInstallerWorkDir = Join-Path $WorkRoot "pyinstaller-work"
 $InstallerRelativePathBudget = 190
+$RequirementsFile = if ($Minimal) { "requirements-minimal.txt" } else { "requirements.txt" }
+$SpecFile = if ($Minimal) { "packaging\\smarti-minimal.spec" } else { "packaging\\smarti.spec" }
+$DistName = if ($Minimal) { "SmartiAI-Minimal" } else { "SmartiAI" }
 
 function Get-SafeVersion {
     param([string]$Raw)
@@ -291,7 +295,7 @@ if (-not (Test-Path (Join-Path $BuildVenv "Scripts\python.exe"))) {
 }
 $VenvPython = Join-Path $BuildVenv "Scripts\python.exe"
 Invoke-Checked -FilePath $VenvPython -Arguments @("-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel")
-Invoke-Checked -FilePath $VenvPython -Arguments @("-m", "pip", "install", "-r", (Join-Path $RepoRoot "requirements.txt"), "-r", (Join-Path $RepoRoot "requirements-build.txt"))
+Invoke-Checked -FilePath $VenvPython -Arguments @("-m", "pip", "install", "-r", (Join-Path $RepoRoot $RequirementsFile), "-r", (Join-Path $RepoRoot "requirements-build.txt"))
 Invoke-Checked -FilePath $VenvPython -Arguments @("-m", "pip", "check")
 Invoke-Checked -FilePath $VenvPython -Arguments @("-c", "import pymupdf, fitz; print('PyMuPDF visual-QA dependency:', pymupdf.__version__)")
 
@@ -300,9 +304,11 @@ if (-not $SkipRuntime) {
         "-ExecutionPolicy", "Bypass",
         "-File", (Join-Path $RepoRoot "scripts\prepare_runtime.ps1"),
         "-RuntimeDir", $RuntimeDir,
-        "-CacheDir", $DownloadCacheDir
+        "-CacheDir", $DownloadCacheDir,
+        "-RequirementsPath", (Join-Path $RepoRoot $RequirementsFile)
     )
     if ($ForceRuntime) { $prepareArgs += "-Force" }
+    if ($Minimal) { $prepareArgs += "-SkipNode" }
     Invoke-Checked -FilePath "powershell.exe" -Arguments $prepareArgs
 } elseif (-not (Test-Path $RuntimeDir)) {
     throw "Runtime was skipped, but $RuntimeDir does not exist."
@@ -322,7 +328,7 @@ try {
     Pop-Location
 }
 
-if (-not (Test-Path (Join-Path $DistDir "SmartiAI.exe"))) {
+if (-not (Test-Path (Join-Path $DistDir (if ($Minimal) { "SmartiAI-Minimal.exe" } else { "SmartiAI.exe" }))) {
     throw "PyInstaller output is missing SmartiAI.exe in $DistDir"
 }
 
@@ -367,7 +373,8 @@ Assert-ReleaseLayout -Root $DistDir -RequiredRelativePaths @(
 )
 Assert-InstallerPathBudget -Root $DistDir -MaxRelativeLength $InstallerRelativePathBudget
 
-$zipPath = Join-Path $ReleaseDir "SmartiAI-Agent-for-Windows-$ReleaseVersion-win-x64-portable.zip"
+$zipName = if ($Minimal) { "SmartiAI-Agent-for-Windows-$ReleaseVersion-minimal-win-x64-portable.zip" } else { "SmartiAI-Agent-for-Windows-$ReleaseVersion-win-x64-portable.zip" }
+$zipPath = Join-Path $ReleaseDir $zipName
 if (Test-Path $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
 Compress-Archive -LiteralPath $DistDir -DestinationPath $zipPath -Force
 Write-Host "Portable package: $zipPath"
